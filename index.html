@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Brick Breaker</title>
+  <style>
+    body {
+      background-color: #f5f5dc;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      font-family: sans-serif;
+    }
+
+    .container {
+      position: relative;
+      height: 660px;
+      width: 380px;
+      margin: auto;
+      border: 5px solid black;
+      border-bottom: 4px dotted red;
+      border-radius: 5px;
+      background-color: white;
+      overflow: hidden;
+    }
+
+    h3 {
+      font-weight: bold;
+      margin-bottom: 0;
+    }
+
+    #score {
+      display: inline-block;
+      margin-left: 10px;
+    }
+
+    .bricks {
+      display: grid;
+      grid-template-columns: repeat(12, 28px);
+      gap: 2px;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .brick {
+      height: 26px;
+      width: 26px;
+      border-radius: 3px;
+    }
+
+    .blue { background-color: #5c6ac4; }
+    .green { background-color: #338801; }
+    .yellow { background-color: #ffbb11; }
+    .red { background-color: #ff0055; }
+
+    .ball {
+      position: absolute;
+      height: 15px;
+      width: 15px;
+      border-radius: 50%;
+      background-color: black;
+      top: 350px;
+      left: 185px;
+    }
+
+    .bar {
+      position: absolute;
+      height: 12px;
+      width: 60px;
+      background-color: black;
+      bottom: 10px;
+      left: 160px;
+      border-left: 10px solid grey;
+      border-right: 10px solid grey;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Score: <span id="score">0</span></h3>
+  <div class="container" id="gameBox">
+    <div class="bricks" id="bricks"></div>
+    <div class="ball" id="ball"></div>
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <script>
+    const gameBox = document.getElementById("gameBox");
+    const ball = document.getElementById("ball");
+    const bar = document.getElementById("bar");
+    const scoreEl = document.getElementById("score");
+    const bricksContainer = document.getElementById("bricks");
+
+    let score = 0;
+    let speedX = 2;
+    let speedY = -2;
+    let speedBoostTimeout = null;
+
+    // Generate bricks
+    const brickColors = ["blue", "green", "yellow", "red"];
+    const pointsMap = {
+      blue: 1,
+      green: 2,
+      yellow: 3,
+      red: 5,
+    };
+
+    for (let i = 0; i < 72; i++) {
+      const brick = document.createElement("div");
+      const color = brickColors[Math.floor(Math.random() * 4)];
+      brick.classList.add("brick", color);
+      bricksContainer.appendChild(brick);
+    }
+
+    // Bar movement with cursor
+    gameBox.addEventListener("mousemove", (e) => {
+      const rect = gameBox.getBoundingClientRect();
+      let mouseX = e.clientX - rect.left - bar.offsetWidth / 2;
+
+      if (mouseX < 0) mouseX = 0;
+      if (mouseX + bar.offsetWidth > gameBox.clientWidth) {
+        mouseX = gameBox.clientWidth - bar.offsetWidth;
+      }
+
+      bar.style.left = mouseX + "px";
+    });
+
+    // Ball movement
+    function moveBall() {
+      let ballX = ball.offsetLeft;
+      let ballY = ball.offsetTop;
+
+      // Wall collision
+      if (ballX <= 0 || ballX + ball.offsetWidth >= gameBox.clientWidth) speedX *= -1;
+      if (ballY <= 0) speedY *= -1;
+
+      // Bottom collision = Game Over
+      if (ballY + ball.offsetHeight >= gameBox.clientHeight) {
+        clearInterval(gameLoop);
+        alert("Game Over! Final Score: " + score);
+        return;
+      }
+
+      // Bar collision
+      const ballRect = ball.getBoundingClientRect();
+      const barRect = bar.getBoundingClientRect();
+      const gameRect = gameBox.getBoundingClientRect();
+
+      if (
+        ballRect.bottom >= barRect.top &&
+        ballRect.left >= barRect.left &&
+        ballRect.right <= barRect.right
+      ) {
+        speedY *= -1;
+      }
+
+      // Brick collision
+      const bricks = document.querySelectorAll(".brick");
+      for (let brick of bricks) {
+        const brickRect = brick.getBoundingClientRect();
+
+        if (
+          ballRect.right >= brickRect.left &&
+          ballRect.left <= brickRect.right &&
+          ballRect.bottom >= brickRect.top &&
+          ballRect.top <= brickRect.bottom
+        ) {
+          // Add score
+          const color = [...brick.classList].find(cls => pointsMap[cls]);
+          score += pointsMap[color];
+          scoreEl.textContent = score;
+
+          // Speed boost for red
+          if (color === "red") {
+            if (speedBoostTimeout) clearTimeout(speedBoostTimeout);
+            speedX *= 1.5;
+            speedY *= 1.5;
+            speedBoostTimeout = setTimeout(() => {
+              speedX /= 1.5;
+              speedY /= 1.5;
+            }, 3000);
+          }
+
+          brick.remove();
+          speedY *= -1;
+          break;
+        }
+      }
+
+      // Move ball
+      ball.style.left = ballX + speedX + "px";
+      ball.style.top = ballY + speedY + "px";
+    }
+
+    const gameLoop = setInterval(moveBall, 10);
+  </script>
+</body>
+</html>
